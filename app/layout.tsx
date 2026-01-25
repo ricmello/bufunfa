@@ -20,6 +20,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Bufunfa - Privacy-First Expense Manager",
   description: "Self-hosted expense manager with AI-powered categorization",
+  icons: {
+    icon: "/bufunfa.svg",
+  },
 };
 
 export default function RootLayout({

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Upload, Settings, Wallet, FolderKanban } from 'lucide-react';
+import Image from 'next/image';
+import { Home, Upload, Settings, FolderKanban } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -46,8 +47,14 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-4 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Wallet className="h-5 w-5" />
+          <div className="flex h-8 w-8 items-center justify-center">
+            <Image
+              src="/bufunfa.svg"
+              alt="Bufunfa Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+            />
           </div>
           <div>
             <h2 className="text-lg font-semibold">Bufunfa</h2>
