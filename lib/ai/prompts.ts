@@ -10,7 +10,10 @@ export async function getCategorizationPrompt(
   const recurringHints = getRecurringDetectionHints();
 
   const categoryList = categories
-    .map((cat) => `- ${cat.name}: ${cat.hint || 'No description'}`)
+    .map((cat) => {
+      const subcats = cat.subcategories.map((sub) => sub.name).join(', ');
+      return `- ${cat.name}: ${cat.hint}\n  Subcategories: ${subcats}`;
+    })
     .join('\n');
 
   const categoryNames = categories.map((c) => c.name).join(', ');
@@ -27,7 +30,7 @@ Base merchant: "${installmentInfo.baseDescription}"`;
 
 Transaction: ${transactionContext}
 
-Available categories:
+Available categories with subcategories:
 ${categoryList}
 
 BRAZILIAN CONTEXT:
@@ -37,14 +40,15 @@ BRAZILIAN CONTEXT:
 - Brazilian keywords: ASSINATURA (subscription), MENSALIDADE (monthly fee), ANUIDADE (annual fee)
 
 Determine:
-1. Category (choose from list above)
-2. Confidence (0-1)
-3. Merchant name (extract from description, remove installment suffix if present)
-4. Is recurring: true for subscriptions OR installments
-5. Budget category suggestion
-6. Notes: mention if installment or subscription detected
+1. Category (choose from list above, e.g., "Food & Groceries")
+2. Subcategory (choose from the category's subcategories, e.g., "Restaurant")
+3. Confidence (0-1)
+4. Merchant name (extract from description, remove installment suffix if present)
+5. Is recurring: true for subscriptions OR installments
+6. Budget category suggestion
+7. Notes: mention if installment or subscription detected
 
-Return JSON with fields: category, confidence, merchantName, isRecurring, suggestedBudgetCategory, notes.`;
+Return JSON with fields: category, subcategory, confidence, merchantName, isRecurring, suggestedBudgetCategory, notes.`;
 }
 
 export async function getBatchCategorizationPrompt(
@@ -54,7 +58,10 @@ export async function getBatchCategorizationPrompt(
   const recurringHints = getRecurringDetectionHints();
 
   const categoryList = categories
-    .map((cat) => `- ${cat.name}: ${cat.hint || 'No description'}`)
+    .map((cat) => {
+      const subcats = cat.subcategories.map((sub) => sub.name).join(', ');
+      return `- ${cat.name}: ${cat.hint}\n  Subcategories: ${subcats}`;
+    })
     .join('\n');
 
   const categoryNames = categories.map((c) => c.name).join(', ');
@@ -70,7 +77,7 @@ ${expenseList}
 
 Available categories: ${categoryNames}
 
-Category Guidelines:
+Category Guidelines with Subcategories:
 ${categoryList}
 
 BRAZILIAN CONTEXT:
@@ -80,7 +87,8 @@ BRAZILIAN CONTEXT:
 - Keywords: ASSINATURA (subscription), MENSALIDADE (monthly), ANUIDADE (annual)
 
 For EACH transaction (in order), provide:
-- category: One from the list above
+- category: One from the list above (e.g., "Food & Groceries")
+- subcategory: One from that category's subcategories (e.g., "Restaurant")
 - confidence: 0.0 to 1.0
 - merchantName: Extract business name (or null)
 - isRecurring: Boolean for subscription/recurring charges

@@ -2,13 +2,15 @@
 
 import { getExpensesCollection } from '../db/collections';
 import { Expense } from '../types/expense';
+import { ObjectId } from 'mongodb';
 
 export interface RecentExpense {
   _id: string;
   description: string;
   amount: number;
   date: Date;
-  category: string;
+  categoryName: string;
+  subcategoryName: string;
   merchantName: string | null;
 }
 
@@ -16,7 +18,8 @@ export interface TopExpense {
   _id: string;
   description: string;
   amount: number;
-  category: string;
+  categoryName: string;
+  subcategoryName: string;
   merchantName: string | null;
 }
 
@@ -34,18 +37,61 @@ export async function getRecentExpenses(days: number = 7): Promise<RecentExpense
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
-    const expenses = await collection
-      .find({ date: { $gte: cutoffDate } })
-      .sort({ date: -1 })
-      .limit(50)
+    const result = await collection
+      .aggregate([
+        {
+          $match: { date: { $gte: cutoffDate } },
+        },
+        {
+          $sort: { date: -1 },
+        },
+        {
+          $limit: 50,
+        },
+        {
+          $lookup: {
+            from: 'categories',
+            let: { catId: { $toObjectId: '$categoryId' }, subId: '$subcategoryId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$_id', '$$catId'] },
+                },
+              },
+              {
+                $project: {
+                  name: 1,
+                  subcategory: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: '$subcategories',
+                          as: 'sub',
+                          cond: { $eq: ['$$sub._id', '$$subId'] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'categoryData',
+          },
+        },
+        {
+          $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true },
+        },
+      ])
       .toArray();
 
-    return expenses.map((expense) => ({
-      _id: expense._id!.toString(),
+    return result.map((expense: any) => ({
+      _id: expense._id.toString(),
       description: expense.description,
       amount: expense.amount,
       date: expense.date,
-      category: expense.category,
+      categoryName: expense.categoryData?.name || 'Unknown',
+      subcategoryName: expense.categoryData?.subcategory?.name || 'Unknown',
       merchantName: expense.merchantName,
     }));
   } catch (error) {
@@ -62,24 +108,67 @@ export async function getTopExpenses(
   try {
     const collection = await getExpensesCollection();
 
-    const query: any = { amount: { $lt: 0 } }; // Only expenses (negative amounts)
+    const matchQuery: any = { amount: { $lt: 0 } }; // Only expenses (negative amounts)
 
     if (month !== undefined && year !== undefined) {
-      query.statementMonth = month;
-      query.statementYear = year;
+      matchQuery.statementMonth = month;
+      matchQuery.statementYear = year;
     }
 
-    const expenses = await collection
-      .find(query)
-      .sort({ amount: 1 }) // Sort by amount ascending (most negative first)
-      .limit(limit)
+    const result = await collection
+      .aggregate([
+        {
+          $match: matchQuery,
+        },
+        {
+          $sort: { amount: 1 }, // Sort by amount ascending (most negative first)
+        },
+        {
+          $limit: limit,
+        },
+        {
+          $lookup: {
+            from: 'categories',
+            let: { catId: { $toObjectId: '$categoryId' }, subId: '$subcategoryId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$_id', '$$catId'] },
+                },
+              },
+              {
+                $project: {
+                  name: 1,
+                  subcategory: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: '$subcategories',
+                          as: 'sub',
+                          cond: { $eq: ['$$sub._id', '$$subId'] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'categoryData',
+          },
+        },
+        {
+          $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true },
+        },
+      ])
       .toArray();
 
-    return expenses.map((expense) => ({
-      _id: expense._id!.toString(),
+    return result.map((expense: any) => ({
+      _id: expense._id.toString(),
       description: expense.description,
       amount: Math.abs(expense.amount),
-      category: expense.category,
+      categoryName: expense.categoryData?.name || 'Unknown',
+      subcategoryName: expense.categoryData?.subcategory?.name || 'Unknown',
       merchantName: expense.merchantName,
     }));
   } catch (error) {
@@ -148,26 +237,48 @@ export async function getMonthlyTrends(months: number = 6): Promise<MonthlyTrend
 export async function getCategoryBreakdown(
   month?: number,
   year?: number
-): Promise<Array<{ category: string; total: number; count: number }>> {
+): Promise<Array<{ categoryId: string; categoryName: string; total: number; count: number }>> {
   try {
     const collection = await getExpensesCollection();
 
-    const query: any = { amount: { $lt: 0 } };
+    const matchQuery: any = { amount: { $lt: 0 } };
 
     if (month !== undefined && year !== undefined) {
-      query.statementMonth = month;
-      query.statementYear = year;
+      matchQuery.statementMonth = month;
+      matchQuery.statementYear = year;
     }
 
     const result = await collection
       .aggregate([
-        { $match: query },
+        { $match: matchQuery },
         {
           $group: {
-            _id: '$category',
+            _id: '$categoryId',
             total: { $sum: { $abs: '$amount' } },
             count: { $sum: 1 },
           },
+        },
+        {
+          $lookup: {
+            from: 'categories',
+            let: { catId: { $toObjectId: '$_id' } },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$_id', '$$catId'] },
+                },
+              },
+              {
+                $project: {
+                  name: 1,
+                },
+              },
+            ],
+            as: 'categoryData',
+          },
+        },
+        {
+          $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true },
         },
         {
           $sort: { total: -1 },
@@ -176,7 +287,8 @@ export async function getCategoryBreakdown(
       .toArray();
 
     return result.map((item: any) => ({
-      category: item._id,
+      categoryId: item._id,
+      categoryName: item.categoryData?.name || 'Unknown',
       total: item.total,
       count: item.count,
     }));

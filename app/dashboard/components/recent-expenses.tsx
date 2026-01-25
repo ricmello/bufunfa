@@ -1,4 +1,5 @@
 import { getRecentExpenses } from '@/lib/actions/expenses';
+import { getCategoryColorMap } from '@/lib/actions/category-colors';
 import {
   Card,
   CardContent,
@@ -16,18 +17,9 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
-const categoryColors: Record<string, string> = {
-  Food: 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20',
-  Transport: 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20',
-  Shopping: 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20',
-  Entertainment: 'bg-pink-500/10 text-pink-500 hover:bg-pink-500/20',
-  Bills: 'bg-red-500/10 text-red-500 hover:bg-red-500/20',
-  Health: 'bg-green-500/10 text-green-500 hover:bg-green-500/20',
-  Other: 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20',
-};
-
 export async function RecentExpenses() {
   const expenses = await getRecentExpenses(7);
+  const colorMap = await getCategoryColorMap();
 
   if (expenses.length === 0) {
     return (
@@ -62,37 +54,48 @@ export async function RecentExpenses() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {expenses.map((expense) => (
-              <TableRow key={expense._id}>
-                <TableCell className="font-medium">
-                  {new Date(expense.date).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">
-                      {expense.merchantName || expense.description}
-                    </p>
-                    {expense.merchantName && (
-                      <p className="text-xs text-muted-foreground">
-                        {expense.description}
+            {expenses.map((expense) => {
+              const categoryColor = colorMap[expense.categoryName] || '#6b7280';
+              return (
+                <TableRow key={expense._id}>
+                  <TableCell className="font-medium">
+                    {new Date(expense.date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">
+                        {expense.merchantName || expense.description}
                       </p>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="secondary"
-                    className={categoryColors[expense.category] || categoryColors.Other}
-                  >
-                    {expense.category}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  {expense.amount < 0 ? '-' : '+'}$
-                  {Math.abs(expense.amount).toFixed(2)}
-                </TableCell>
-              </TableRow>
-            ))}
+                      {expense.merchantName && (
+                        <p className="text-xs text-muted-foreground">
+                          {expense.description}
+                        </p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <Badge
+                        variant="secondary"
+                        style={{
+                          backgroundColor: `${categoryColor}20`,
+                          color: categoryColor,
+                        }}
+                      >
+                        {expense.categoryName}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {expense.subcategoryName}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {expense.amount < 0 ? '-' : '+'}$
+                    {Math.abs(expense.amount).toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>

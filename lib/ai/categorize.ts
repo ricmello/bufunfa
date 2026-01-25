@@ -12,6 +12,7 @@ async function getCategorizationSchema(): Promise<z.ZodObject<any>> {
 
   return z.object({
     category: z.enum(categoryNames as [string, ...string[]]),
+    subcategory: z.string(), // Validated against category's subcategories in import action
     confidence: z.number().min(0).max(1),
     merchantName: z.string().nullable(),
     isRecurring: z.boolean(),
@@ -47,9 +48,10 @@ export async function categorizeExpense(
   } catch (error) {
     console.error('Error categorizing expense:', error);
 
-    // Fallback to "Other" category if AI fails
+    // Fallback to "Other" → "Uncategorized" if AI fails
     return {
       category: 'Other',
+      subcategory: 'Uncategorized',
       confidence: 0,
       merchantName: null,
       isRecurring: false,
@@ -88,7 +90,7 @@ export async function categorizeExpenseWithRetry(
 Broken JSON:
 ${errorJson}
 
-Required format: { category, confidence, merchantName, isRecurring, suggestedBudgetCategory, notes }
+Required format: { category, subcategory, confidence, merchantName, isRecurring, suggestedBudgetCategory, notes }
 
 Attempt ${attempt}/3. Return ONLY valid JSON, no markdown or explanations.`,
         3
@@ -98,6 +100,7 @@ Attempt ${attempt}/3. Return ONLY valid JSON, no markdown or explanations.`,
         // Ultimate fallback
         return {
           category: 'Other',
+          subcategory: 'Uncategorized',
           confidence: 0,
           merchantName: null,
           isRecurring: false,
@@ -111,6 +114,7 @@ Attempt ${attempt}/3. Return ONLY valid JSON, no markdown or explanations.`,
       console.error('Error in retry logic:', retryError);
       return {
         category: 'Other',
+        subcategory: 'Uncategorized',
         confidence: 0,
         merchantName: null,
         isRecurring: false,

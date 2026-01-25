@@ -22,14 +22,18 @@ export async function getCategoryColorMap(): Promise<CategoryColorMap> {
     return colorMap;
   } catch (error) {
     console.error('Error fetching category colors:', error);
-    // Return default fallback
+    // Return default fallback matching seeded categories
     return {
-      Food: '#f59e0b',
-      Transport: '#3b82f6',
-      Shopping: '#ec4899',
+      'Food & Groceries': '#f59e0b',
+      Transportation: '#3b82f6',
+      Housing: '#14b8a6',
+      'Bills & Subscriptions': '#ef4444',
       Entertainment: '#8b5cf6',
-      Bills: '#ef4444',
+      Shopping: '#ec4899',
       Health: '#10b981',
+      Education: '#f97316',
+      Work: '#0ea5e9',
+      Financial: '#a855f7',
       Other: '#6b7280',
     };
   }

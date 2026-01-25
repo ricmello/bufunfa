@@ -1,69 +1,60 @@
-# Bufunfa - Project Guidelines
+# Bufunfa - AI-Optimized Guidelines
 
-## Overview
-Bufunfa is a privacy-first, self-hosted expense manager with AI-powered categorization. Built with Next.js 16, MongoDB, and Groq AI, it allows users to import credit card statements and visualize spending patterns without sharing data with third parties.
+> **Token Optimization Notice**
+> This doc uses abbreviations & symbols for AI efficiency. When updating:
+> - Use symbols: → (becomes), ✓ (required), × (avoid), ∴ (therefore)
+> - Use abbrev: SC (Server Component), CA (Client Component), SA (Server Action), DB (Database), TS (TypeScript)
+> - Keep format compact, no fluff
+> - Preserve all critical patterns & standards
 
-## Architecture Principles
+---
 
-### Privacy First
-- All data stored locally in MongoDB
-- Only Groq API used for AI categorization (transaction descriptions only)
-- No user authentication required for local deployment
-- Self-hosted via Docker Compose
-- No telemetry or analytics
+## Stack
+Next.js 16 (App Router) • TS (strict) • MongoDB 8.0 • Groq AI (Llama 4 Scout) • shadcn/ui • Tailwind • PapaParse
 
-### Technology Stack
-- **Framework:** Next.js 16 (App Router)
-- **Language:** TypeScript (strict mode)
-- **Database:** MongoDB 8.0 with native driver
-- **AI:** Groq with `meta-llama/llama-4-scout-17b-16e-instruct` model (Llama 4 Scout)
-- **Charts:** Recharts via shadcn/ui chart components
-- **CSV Parsing:** PapaParse
-- **UI Components:** shadcn/ui with Tailwind CSS
-- **State Management:** React Server Components (no client state library)
-- **Data Layer:** Next.js Server Actions (no API routes)
+Privacy-first expense manager: self-hosted, no auth, no telemetry, AI categorization via Groq only
+
+---
 
 ## Code Standards
 
 ### TypeScript
-- Strict mode enabled
-- All functions must have explicit return types
-- Use interfaces for data structures
-- Prefer `type` for unions and `interface` for objects
-- No `any` types (use `unknown` if absolutely necessary)
+- ✓ Strict mode, explicit return types
+- ✓ `interface` for objects, `type` for unions
+- × Never `any` (use `unknown` if needed)
 
 ### React Patterns
-- **Server Components by default** - Only use `'use client'` when necessary (interactivity, hooks, browser APIs)
-- **Suspense boundaries** - Wrap async components with `<Suspense>` and provide loading skeletons
-- **Error boundaries** - Handle errors gracefully with try-catch in Server Actions
-- **Server Actions** - Prefix files with `'use server'` directive
-- **No prop drilling** - Keep component trees shallow, use Server Components to fetch data where needed
+- ✓ SC by default, CA only when needed (interactivity, hooks, browser APIs)
+- ✓ Wrap async SC in `<Suspense>` + loading skeleton
+- ✓ SA files start with `'use server'`
+- ✓ Try-catch in all SA, return `{ success: boolean; error?: string }`
+- × No prop drilling, fetch data where needed
 
-### File Naming Conventions
-- **Components:** `kebab-case.tsx` (e.g., `csv-dropzone.tsx`)
-- **Actions:** `kebab-case.ts` in `/lib/actions/`
-- **Pages:** `page.tsx` following Next.js App Router conventions
-- **Types:** `kebab-case.ts` in `/lib/types/`
-- **Constants:** ALL_CAPS for exported constants
+### File Naming
+- Components: `kebab-case.tsx`
+- Actions: `kebab-case.ts` in `/lib/actions/`
+- Types: `kebab-case.ts` in `/lib/types/`
+- Constants: `ALL_CAPS`
 
 ### Styling
-- **Tailwind CSS only** - No custom CSS files except `globals.css`
-- **shadcn/ui components** - Prefer using existing components
-- **Responsive design** - Mobile-first approach, use Tailwind breakpoints
-- **Dark mode** - Support via Tailwind dark mode classes
-- **Consistent spacing** - Use Tailwind spacing scale (4, 6, 8, etc.)
+- ✓ Tailwind only (except `globals.css`)
+- ✓ shadcn/ui components
+- ✓ Mobile-first, dark mode support
+- ✓ Spacing scale: 4, 6, 8
 
-## Database Patterns
+---
 
-### Collection Structure
-```typescript
-// expenses collection
+## DB Schema
+
+### Expenses
+```ts
 {
   _id: ObjectId,
   description: string,
   amount: number,
   date: Date,
-  category: string,
+  categoryId: string,      // ObjectId ref → categories
+  subcategoryId: string,   // ObjectId ref → subcategory in category
   categoryConfidence: number,
   merchantName: string | null,
   statementMonth: number,
@@ -74,289 +65,251 @@ Bufunfa is a privacy-first, self-hosted expense manager with AI-powered categori
   aiInsights: {
     isRecurring: boolean,
     suggestedBudgetCategory: string,
-    notes: string | null
+    notes: string | null,
+    installment?: { current: number, total: number, baseDescription: string }
   }
 }
 ```
 
+### Categories (Read-Only, Seeded at Startup)
+```ts
+{
+  _id: ObjectId,
+  name: string,           // "Food & Groceries", "Transportation"...
+  color: string,          // Hex (#f59e0b)
+  hint: string,           // AI prompt context
+  icon: string,           // Emoji (🍔)
+  order: number,
+  subcategories: [        // Nested array
+    { _id: string, name: string }  // "Supermarket", "Restaurant"...
+  ],
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+**11 Categories:**
+1. Food & Groceries 🍔 → Supermarket, Restaurant, Delivery, Other
+2. Transportation 🚗 → Ride Share, Public Transport, Car Maintenance, Other
+3. Housing 🏠 → Rent/Mortgage, Utilities, Condo Fees, Maintenance, Other
+4. Bills & Subscriptions 📄 → Streaming, Software/SaaS, Gym, Insurance, Bank Fees, Other
+5. Entertainment 🎬 → Movies/Events, Games, Books/Hobbies, Sports/Activities, Travel/Tourism, Other
+6. Shopping 🛍️ → Clothing/Shoes, Electronics, Personal Care, Home Goods, Gifts, Other
+7. Health 💊 → Pharmacy, Hospital/Doctor, Insurance, Other
+8. Education 📚 → Courses/Certifications, Books/Materials, Other
+9. Work 💼 → Equipment, Services, Business Travel, Other
+10. Financial 💰 → Investments/Savings, Loans/Debt, Taxes, Other
+11. Other 📦 → Cash Withdrawal, Uncategorized, Other
+
 ### Indexes
-- `{ statementYear: 1, statementMonth: 1 }` - Monthly queries
-- `{ date: -1 }` - Recent expenses
-- `{ category: 1, statementYear: 1, statementMonth: 1 }` - Category analysis
+**Expenses:**
+- `{ statementYear: 1, statementMonth: 1 }` - monthly queries
+- `{ date: -1 }` - recent
+- `{ categoryId: 1, subcategoryId: 1, statementYear: 1, statementMonth: 1 }` - category analysis
+
+**Categories:**
+- `{ name: 1 }` unique
 
 ### Query Patterns
-- Use aggregation pipeline for complex queries
-- Always handle empty results gracefully
-- Return empty arrays instead of null
+- Use aggregation pipeline for joins
+- Always handle empty results → return `[]` not `null`
 - Use `.toArray()` for aggregations
-- Convert ObjectId to string when sending to client
+- Convert `ObjectId` → string before sending to client
+- Join categories via `$lookup` when displaying
 
-## Server Actions Patterns
+---
 
-### Structure
-```typescript
+## Server Actions Pattern
+
+```ts
 'use server';
 
 export async function actionName(params): Promise<ReturnType> {
   try {
-    // 1. Get collection
-    const collection = await getExpensesCollection();
-
-    // 2. Perform operation
+    const collection = await getCollection();
     const result = await collection.find({}).toArray();
 
-    // 3. Transform data (remove MongoDB-specific types)
-    return result.map(item => ({
-      ...item,
-      _id: item._id.toString(),
-    }));
+    // Transform: ObjectId → string
+    return result.map(item => ({ ...item, _id: item._id.toString() }));
   } catch (error) {
     console.error('Error in actionName:', error);
-    // 4. Return safe fallback
-    return [];
+    return []; // Safe fallback
   }
 }
 ```
 
-### Error Handling
-- Always wrap in try-catch
-- Log errors with context
-- Return typed error objects: `{ success: boolean; error?: string }`
-- Never throw errors to client
-- Provide user-friendly error messages
+**Error Handling:**
+- ✓ Wrap all SA in try-catch
+- ✓ Log with context
+- ✓ Return typed errors: `{ success: boolean; error?: string }`
+- × Never throw to client
+- ✓ User-friendly messages
 
-## AI Integration Guidelines
+---
 
-### Categorization
-- Model: `meta-llama/llama-4-scout-17b-16e-instruct` (Llama 4 Scout)
-- Temperature: 0.3 (consistent results)
-- JSON Schema: Native support via `generateObject()`
-- Timeout: 10 seconds
-- Fallback: Category = "Other", confidence = 0
-- Rate limiting: 200ms delay between batches during import
-- Batch size: 10 expenses per batch
+## AI Integration
 
-### Prompt Engineering
-- Clear instructions with examples
-- Structured JSON output using Zod schema
-- Include all possible categories
-- Request confidence score
-- Extract merchant name when possible
+### Categorization Flow
+1. AI returns category name + subcategory name
+2. Resolve names → ObjectIds via lookup
+3. Save expense with `categoryId` + `subcategoryId`
+4. Fallback: "Other" → "Uncategorized", confidence = 0
 
-### Categories
-- Food, Transport, Shopping, Entertainment, Bills, Health, Other
-- Extensible via `EXPENSE_CATEGORIES` constant
+### Config
+- Model: `meta-llama/llama-4-scout-17b-16e-instruct`
+- Temp: 0.3 (consistent)
+- JSON via `generateObject()` + Zod schema
+- Timeout: 10s
+- Rate limit: 200ms between batches
+- Batch size: 10 expenses
 
-## Git Commit Conventions
+### Prompt Pattern
+```ts
+Available categories with subcategories:
+- Food & Groceries: hint text
+  Subcategories: Supermarket, Restaurant, Delivery, Other
+...
 
-### Format
+Return JSON: { category, subcategory, confidence, merchantName, isRecurring, suggestedBudgetCategory, notes }
+```
+
+---
+
+## Component Structure
+
+```
+app/
+├── [feature]/
+│   ├── page.tsx           # SC route
+│   └── components/
+│       ├── client.tsx     # CA ('use client')
+│       └── server.tsx     # SC
+lib/
+├── actions/               # SA
+├── ai/                    # AI logic
+├── db/                    # DB utils
+└── types/                 # TS types
+components/ui/             # shadcn
+```
+
+**Import Order:**
+1. React/Next.js
+2. Third-party
+3. Local components
+4. Utils/actions
+5. Types
+
+---
+
+## Performance
+
+### MongoDB
+- Connection pooling (singleton)
+- Indexes on freq queried fields
+- Aggregation for complex queries
+- Limit results
+
+### Next.js
+- SC for data fetching
+- Suspense for streaming
+- × No client-side fetching
+- Static metadata
+
+### Charts
+- Lazy load Recharts
+- Limit data points
+- Memoize transformations
+
+---
+
+## Security
+
+### MongoDB
+- Env vars for connection
+- Parameterized queries (driver handles)
+- Validate input in SA
+- × No raw string queries
+
+### CSV Upload
+- Server-side validation
+- In-memory processing (no file storage)
+- Sanitize before parsing
+
+### Env
+- × Never commit `.env.local`
+- ✓ Use `NEXT_PUBLIC_` only for client vars
+- ✓ Validate required vars at startup
+
+---
+
+## Git Commits
+
 ```
 <type>: <subject>
 
 <body>
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ```
 
-### Types
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting)
-- `refactor`: Code refactoring
-- `test`: Adding tests
-- `chore`: Maintenance tasks
-
-### Examples
-```
-feat: add CSV import with AI categorization
-
-Implemented CSV file upload, parsing with PapaParse, and batch
-categorization using Groq AI. Includes progress indicators and
-confirmation dialog for month/year selection.
-```
-
-## Component Organization
-
-### Structure
-```
-app/
-├── [feature]/
-│   ├── page.tsx              # Route page (Server Component)
-│   └── components/
-│       ├── client-comp.tsx   # 'use client' components
-│       └── server-comp.tsx   # Server Components
-lib/
-├── actions/                  # Server Actions
-├── ai/                       # AI logic
-├── db/                       # Database utilities
-└── types/                    # TypeScript types
-components/
-└── ui/                       # shadcn/ui components
-```
-
-### Import Order
-1. React/Next.js imports
-2. Third-party libraries
-3. Local components
-4. Local utilities/actions
-5. Types
-6. Styles
-
-## Performance Considerations
-
-### MongoDB
-- Connection pooling via singleton pattern
-- Indexes on frequently queried fields
-- Aggregation pipeline for complex queries
-- Limit results in dashboard queries
-
-### Next.js
-- Server Components for data fetching
-- Suspense boundaries for streaming
-- No client-side data fetching
-- Static metadata where possible
-
-### Charts
-- Lazy load Recharts components
-- Limit data points displayed
-- Responsive sizing
-- Memoize chart data transformations
-
-## Security Best Practices
-
-### MongoDB
-- Use connection string from environment variables
-- Parameterized queries (MongoDB driver handles this)
-- Validate input in Server Actions
-- No raw string queries
-
-### File Upload
-- Server-side validation of CSV format
-- File size limits (handled by browser)
-- Sanitize file content before parsing
-- No file storage (process in memory)
-
-### Environment Variables
-- Never commit `.env.local`
-- Provide `.env.example` template
-- Use `NEXT_PUBLIC_` prefix only for client-exposed vars
-- Validate required env vars on startup
-
-## Testing Checklist
-
-### Before Committing
-- [ ] TypeScript compiles without errors
-- [ ] No console errors in browser
-- [ ] Dark mode works correctly
-- [ ] Mobile responsive
-- [ ] Loading states display
-- [ ] Error states handled
-
-### End-to-End Test Flow
-1. Start MongoDB: `docker-compose up -d`
-2. Start Next.js: `pnpm dev`
-3. Import sample CSV
-4. Verify AI categorization
-5. Check dashboard charts
-6. Test settings page
-7. Verify delete all data
-
-## Future Enhancements
-
-### Planned Features
-- Multi-user support (add userId to schema)
-- Budget tracking and alerts
-- Recurring transaction detection improvements
-- Export to CSV/PDF
-- Custom category creation
-- Currency conversion
-- Receipt attachment support
-
-### Scalability Considerations
-- Ready for multi-tenancy (add userId field)
-- Database sharding strategy
-- Caching layer (Redis)
-- Background job processing for imports
-- Rate limiting for AI requests
-
-## Development Commands
-
-```bash
-# Start MongoDB
-docker-compose up -d
-
-# Install dependencies
-pnpm install
-
-# Run development server
-pnpm dev
-
-# Build for production
-pnpm build
-
-# Start production server
-pnpm start
-
-# Type check
-pnpm type-check
-```
-
-## Environment Setup
-
-### Prerequisites
-- Node.js 18+ (20+ recommended)
-- pnpm 9+
-- Docker and Docker Compose
-- Groq API key (free tier available)
-
-### Initial Setup
-1. Clone repository
-2. Copy `.env.example` to `.env.local`
-3. Add Groq API key to `.env.local`
-4. Run `docker-compose up -d` to start MongoDB
-5. Run `pnpm install`
-6. Run `pnpm dev`
-7. Navigate to `http://localhost:3000`
-
-## Troubleshooting
-
-### MongoDB Connection Issues
-- Check Docker container is running: `docker ps`
-- Verify credentials in `.env.local`
-- Check port 27017 is not in use
-- Restart containers: `docker-compose restart`
-
-### AI Categorization Failures
-- Verify Groq API key is valid
-- Check API rate limits
-- Fallback to "Other" category on error
-- Check console logs for error details
-
-### Import Issues
-- Verify CSV format (Date, Description, Amount)
-- Check date format compatibility
-- Ensure amount parsing handles currency symbols
-- Review console logs for parsing errors
-
-## Contributing Guidelines
-
-### Pull Request Process
-1. Create feature branch from main
-2. Follow code standards and conventions
-3. Add tests if applicable
-4. Update CLAUDE.md if architecture changes
-5. Ensure all checks pass
-6. Request review
-
-### Code Review Focus
-- Type safety
-- Error handling
-- Performance implications
-- Security considerations
-- User experience
-- Code readability
+**Types:** feat, fix, docs, style, refactor, test, chore
 
 ---
 
-**Last Updated:** 2026-01-25
-**Version:** 1.0.0
-**Maintainer:** AI-assisted development with Claude
+## Pre-Commit Checklist
+
+- [ ] TS compiles
+- [ ] No console errors
+- [ ] Dark mode works
+- [ ] Mobile responsive
+- [ ] Loading states
+- [ ] Error states
+
+---
+
+## Commands
+
+```bash
+docker-compose up -d          # Start MongoDB
+pnpm dev                      # Dev server
+pnpm build                    # Production build
+pnpm type-check               # TS check
+
+# Reset categories (after schema change)
+docker exec -i bufunfa-mongodb mongosh bufunfa -u bufunfa -p bufunfa_local_dev --authenticationDatabase admin --eval "db.categories.drop()"
+```
+
+---
+
+## Common Patterns for New Features
+
+### Adding New Collection
+1. Define interface in `/lib/types/`
+2. Create collection getter in `/lib/db/` with indexes
+3. Add SA in `/lib/actions/` (try-catch, ObjectId → string)
+4. Join in queries via `$lookup` if needed
+5. Display in SC, wrap in `<Suspense>`
+
+### Adding Category-Related Feature
+- ✓ Categories are read-only (seeded at startup)
+- × Don't allow create/update/delete
+- Join via `$lookup` + `$unwind` for display
+- Resolve names → ObjectIds before saving
+
+### Adding AI Feature
+- Use `generateObject()` + Zod schema
+- Temp 0.3 for consistency
+- Batch processing (10 items, 200ms delay)
+- Always provide fallback
+- Return names → resolve to ObjectIds
+
+### Adding Dashboard Component
+- SC fetches data via SA
+- CA renders chart (Recharts)
+- Get colors from `getCategoryColorMap()`
+- Handle empty state
+- Wrap in `<Suspense>`
+
+---
+
+**Last Updated:** 2026-01-25 | **Version:** 2.0.0

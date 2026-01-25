@@ -3,7 +3,8 @@ export interface Expense {
   description: string;
   amount: number;
   date: Date;
-  category: string;
+  categoryId: string; // ObjectId reference to category
+  subcategoryId: string; // ObjectId reference to subcategory within category
   categoryConfidence: number;
   merchantName: string | null;
   statementMonth: number;
@@ -29,7 +30,8 @@ export interface ExpenseInsert extends Omit<Expense, '_id' | 'createdAt' | 'upda
 }
 
 export interface AICategorizationResult {
-  category: string;
+  category: string; // Main category name (e.g., "Food & Groceries")
+  subcategory: string; // Subcategory name (e.g., "Restaurant")
   confidence: number;
   merchantName: string | null;
   isRecurring: boolean;

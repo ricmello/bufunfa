@@ -1,11 +1,16 @@
+export interface Subcategory {
+  _id: string; // ObjectId as string
+  name: string;
+}
+
 export interface Category {
-  _id?: string;
-  name: string; // Unique category name
+  _id?: string; // ObjectId as string
+  name: string; // Unique category name (e.g., "Food & Groceries")
   color: string; // Hex color code (#f59e0b)
-  hint: string | null; // AI categorization hint
-  icon: string; // Lucide icon name
-  isDefault: boolean; // true for system categories
-  order: number; // Sort order
+  hint: string; // AI categorization hint
+  icon: string; // Emoji icon (🍔)
+  order: number; // Display sort order
+  subcategories: Subcategory[]; // Nested subcategories
   createdAt: Date;
   updatedAt: Date;
 }

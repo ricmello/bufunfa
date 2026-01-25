@@ -22,7 +22,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 interface CategoryBreakdownChartClientProps {
-  breakdown: Array<{ category: string; total: number; count: number }>;
+  breakdown: Array<{ categoryId: string; categoryName: string; total: number; count: number }>;
   categoryColors: Record<string, string>;
 }
 
@@ -31,10 +31,10 @@ export function CategoryBreakdownChartClient({
   categoryColors,
 }: CategoryBreakdownChartClientProps) {
   const chartData = breakdown.map((item) => ({
-    name: item.category,
+    name: item.categoryName,
     value: item.total,
     count: item.count,
-    fill: categoryColors[item.category] || categoryColors['Other'] || '#6b7280',
+    fill: categoryColors[item.categoryName] || categoryColors['Other'] || '#6b7280',
   }));
 
   const totalAmount = breakdown.reduce((sum, item) => sum + item.total, 0);

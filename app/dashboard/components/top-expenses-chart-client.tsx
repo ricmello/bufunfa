@@ -31,8 +31,9 @@ export function TopExpensesChartClient({ expenses, categoryColors }: TopExpenses
   const chartData = expenses.map((expense) => ({
     name: expense.merchantName || expense.description.substring(0, 20),
     amount: expense.amount,
-    category: expense.category,
-    fill: categoryColors[expense.category] || categoryColors['Other'] || '#6b7280',
+    category: expense.categoryName,
+    subcategory: expense.subcategoryName,
+    fill: categoryColors[expense.categoryName] || categoryColors['Other'] || '#6b7280',
   }));
 
   return (

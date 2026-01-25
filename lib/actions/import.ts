@@ -5,6 +5,8 @@ import { getExpensesCollection } from '../db/collections';
 import { categorizeBatchExpenses } from '../ai/categorize';
 import { Expense } from '../types/expense';
 import { detectInstallment } from '../utils/installment-detector';
+import { getAllCategories } from './categories';
+import { Category } from '../types/category';
 
 interface CSVRow {
   Date: string;
@@ -83,6 +85,58 @@ export async function parseCSV(fileContent: string): Promise<ParsedCSVData> {
   });
 }
 
+/**
+ * Helper function to resolve category and subcategory names to ObjectIds
+ * Returns both IDs with fallback to "Other" → "Uncategorized"
+ */
+function resolveCategoryIds(
+  categoryName: string,
+  subcategoryName: string,
+  categories: Category[]
+): { categoryId: string; subcategoryId: string } {
+  // Find the category
+  const category = categories.find((cat) => cat.name === categoryName);
+
+  if (!category) {
+    // Fallback to "Other" category
+    const otherCategory = categories.find((cat) => cat.name === 'Other')!;
+    const uncategorizedSubcat = otherCategory.subcategories.find(
+      (sub) => sub.name === 'Uncategorized'
+    )!;
+
+    return {
+      categoryId: otherCategory._id!,
+      subcategoryId: uncategorizedSubcat._id,
+    };
+  }
+
+  // Find the subcategory within the category
+  const subcategory = category.subcategories.find((sub) => sub.name === subcategoryName);
+
+  if (!subcategory) {
+    // Fallback to "Other" subcategory within the category
+    const otherSubcat = category.subcategories.find((sub) => sub.name === 'Other');
+
+    if (otherSubcat) {
+      return {
+        categoryId: category._id!,
+        subcategoryId: otherSubcat._id,
+      };
+    }
+
+    // Ultimate fallback: use first subcategory
+    return {
+      categoryId: category._id!,
+      subcategoryId: category.subcategories[0]._id,
+    };
+  }
+
+  return {
+    categoryId: category._id!,
+    subcategoryId: subcategory._id,
+  };
+}
+
 export async function importExpenses(
   fileContent: string,
   statementMonth: number,
@@ -95,6 +149,9 @@ export async function importExpenses(
     if (rows.length === 0) {
       return { success: false, count: 0, error: 'No valid rows found in CSV' };
     }
+
+    // Fetch all categories for ID resolution
+    const categories = await getAllCategories();
 
     // Detect installments before categorization
     const expensesWithInstallments = rows.map((row) => {
@@ -113,31 +170,41 @@ export async function importExpenses(
 
     // Prepare expenses for insertion
     const now = new Date();
-    const expenses: Omit<Expense, '_id'>[] = rows.map((row, index) => ({
-      description: row.description,
-      amount: row.amount,
-      date: new Date(row.date),
-      category: categorizations[index].category,
-      categoryConfidence: categorizations[index].confidence,
-      merchantName: categorizations[index].merchantName,
-      statementMonth,
-      statementYear,
-      rawCsvRow: JSON.stringify(row),
-      aiInsights: {
-        isRecurring: categorizations[index].isRecurring,
-        suggestedBudgetCategory: categorizations[index].suggestedBudgetCategory,
-        notes: categorizations[index].notes,
-        ...(expensesWithInstallments[index].installmentInfo.isInstallment && {
-          installment: {
-            current: expensesWithInstallments[index].installmentInfo.currentInstallment!,
-            total: expensesWithInstallments[index].installmentInfo.totalInstallments!,
-            baseDescription: expensesWithInstallments[index].installmentInfo.baseDescription!,
-          },
-        }),
-      },
-      createdAt: now,
-      updatedAt: now,
-    }));
+    const expenses: Omit<Expense, '_id'>[] = rows.map((row, index) => {
+      // Resolve category and subcategory names to ObjectIds
+      const { categoryId, subcategoryId } = resolveCategoryIds(
+        categorizations[index].category,
+        categorizations[index].subcategory,
+        categories
+      );
+
+      return {
+        description: row.description,
+        amount: row.amount,
+        date: new Date(row.date),
+        categoryId,
+        subcategoryId,
+        categoryConfidence: categorizations[index].confidence,
+        merchantName: categorizations[index].merchantName,
+        statementMonth,
+        statementYear,
+        rawCsvRow: JSON.stringify(row),
+        aiInsights: {
+          isRecurring: categorizations[index].isRecurring,
+          suggestedBudgetCategory: categorizations[index].suggestedBudgetCategory,
+          notes: categorizations[index].notes,
+          ...(expensesWithInstallments[index].installmentInfo.isInstallment && {
+            installment: {
+              current: expensesWithInstallments[index].installmentInfo.currentInstallment!,
+              total: expensesWithInstallments[index].installmentInfo.totalInstallments!,
+              baseDescription: expensesWithInstallments[index].installmentInfo.baseDescription!,
+            },
+          }),
+        },
+        createdAt: now,
+        updatedAt: now,
+      };
+    });
 
     // Insert into database
     const collection = await getExpensesCollection();
