@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,9 @@ interface ImportConfirmationProps {
   onConfirm: (month: number, year: number) => void;
   onCancel: () => void;
   isImporting?: boolean;
+  initialMonth?: number;
+  initialYear?: number;
+  autoDetected?: boolean;
 }
 
 const MONTHS = [
@@ -38,14 +41,30 @@ export function ImportConfirmation({
   onConfirm,
   onCancel,
   isImporting = false,
+  initialMonth,
+  initialYear,
+  autoDetected = false,
 }: ImportConfirmationProps) {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<string>(
-    (currentDate.getMonth() + 1).toString()
+    initialMonth?.toString() || (currentDate.getMonth() + 1).toString()
   );
   const [selectedYear, setSelectedYear] = useState<string>(
-    currentDate.getFullYear().toString()
+    initialYear?.toString() || currentDate.getFullYear().toString()
   );
+
+  // Sync state with props when they change
+  useEffect(() => {
+    if (initialMonth !== undefined) {
+      setSelectedMonth(initialMonth.toString());
+    }
+  }, [initialMonth]);
+
+  useEffect(() => {
+    if (initialYear !== undefined) {
+      setSelectedYear(initialYear.toString());
+    }
+  }, [initialYear]);
 
   const handleConfirm = () => {
     onConfirm(parseInt(selectedMonth), parseInt(selectedYear));
@@ -68,7 +87,13 @@ export function ImportConfirmation({
           <DialogTitle>Confirm Import</DialogTitle>
           <DialogDescription>
             You are about to import <strong>{rowCount}</strong> transactions.
-            Please specify the statement period.
+            {autoDetected ? (
+              <span className="block mt-2 text-primary font-medium">
+                📅 Statement period detected from filename
+              </span>
+            ) : (
+              <span className="block mt-2">Please specify the statement period.</span>
+            )}
           </DialogDescription>
         </DialogHeader>
 

@@ -15,6 +15,11 @@ export interface Expense {
     isRecurring: boolean;
     suggestedBudgetCategory: string;
     notes: string | null;
+    installment?: {
+      current: number;
+      total: number;
+      baseDescription: string;
+    };
   };
 }
 

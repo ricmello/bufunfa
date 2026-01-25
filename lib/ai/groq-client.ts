@@ -9,4 +9,5 @@ export const groq = createGroq({
 });
 
 // Model to use for expense categorization
-export const CATEGORIZATION_MODEL = 'llama-3.3-70b-versatile';
+// Using Llama 4 Scout for native json_schema support
+export const CATEGORIZATION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';

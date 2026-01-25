@@ -121,18 +121,24 @@ export async function getMonthlyTrends(months: number = 6): Promise<MonthlyTrend
       ])
       .toArray();
 
+    console.log('Monthly trends aggregation result:', JSON.stringify(result, null, 2));
+
     const monthNames = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
 
-    return result.map((item: any) => ({
+    const trends = result.map((item: any) => ({
       month: monthNames[item._id.month - 1],
       year: item._id.year,
       totalExpenses: item.totalExpenses,
       totalCredits: item.totalCredits,
       netAmount: item.totalCredits - item.totalExpenses,
     })).reverse(); // Reverse to show oldest to newest
+
+    console.log('Formatted trends:', trends);
+
+    return trends;
   } catch (error) {
     console.error('Error fetching monthly trends:', error);
     return [];

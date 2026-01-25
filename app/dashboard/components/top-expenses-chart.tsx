@@ -1,4 +1,5 @@
 import { getTopExpenses } from '@/lib/actions/expenses';
+import { getCategoryColorMap } from '@/lib/actions/category-colors';
 import {
   Card,
   CardContent,
@@ -8,8 +9,9 @@ import {
 } from '@/components/ui/card';
 import { TopExpensesChartClient } from './top-expenses-chart-client';
 
-export async function TopExpensesChart(): Promise<JSX.Element> {
+export async function TopExpensesChart() {
   const expenses = await getTopExpenses(10);
+  const categoryColors = await getCategoryColorMap();
 
   if (expenses.length === 0) {
     return (
@@ -27,5 +29,5 @@ export async function TopExpensesChart(): Promise<JSX.Element> {
     );
   }
 
-  return <TopExpensesChartClient expenses={expenses} />;
+  return <TopExpensesChartClient expenses={expenses} categoryColors={categoryColors} />;
 }

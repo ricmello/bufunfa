@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Upload, Settings, Wallet } from 'lucide-react';
+import { Home, Upload, Settings, Wallet, FolderKanban } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,11 @@ const navigationItems = [
     title: 'Import',
     href: '/import',
     icon: Upload,
+  },
+  {
+    title: 'Categories',
+    href: '/categories',
+    icon: FolderKanban,
   },
   {
     title: 'Settings',

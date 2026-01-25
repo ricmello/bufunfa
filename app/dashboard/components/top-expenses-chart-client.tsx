@@ -16,16 +16,6 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { TopExpense } from '@/lib/actions/expenses';
 
-const categoryColors: Record<string, string> = {
-  Food: 'hsl(var(--chart-1))',
-  Transport: 'hsl(var(--chart-2))',
-  Shopping: 'hsl(var(--chart-3))',
-  Entertainment: 'hsl(var(--chart-4))',
-  Bills: 'hsl(var(--chart-5))',
-  Health: 'hsl(var(--chart-6))',
-  Other: 'hsl(var(--muted))',
-};
-
 const chartConfig = {
   amount: {
     label: 'Amount',
@@ -34,13 +24,15 @@ const chartConfig = {
 
 interface TopExpensesChartClientProps {
   expenses: TopExpense[];
+  categoryColors: Record<string, string>;
 }
 
-export function TopExpensesChartClient({ expenses }: TopExpensesChartClientProps) {
+export function TopExpensesChartClient({ expenses, categoryColors }: TopExpensesChartClientProps) {
   const chartData = expenses.map((expense) => ({
     name: expense.merchantName || expense.description.substring(0, 20),
     amount: expense.amount,
-    fill: categoryColors[expense.category] || categoryColors.Other,
+    category: expense.category,
+    fill: categoryColors[expense.category] || categoryColors['Other'] || '#6b7280',
   }));
 
   return (

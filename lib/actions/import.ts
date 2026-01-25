@@ -2,8 +2,9 @@
 
 import Papa from 'papaparse';
 import { getExpensesCollection } from '../db/collections';
-import { categorizeExpenses } from '../ai/categorize';
+import { categorizeBatchExpenses } from '../ai/categorize';
 import { Expense } from '../types/expense';
+import { detectInstallment } from '../utils/installment-detector';
 
 interface CSVRow {
   Date: string;
@@ -95,9 +96,15 @@ export async function importExpenses(
       return { success: false, count: 0, error: 'No valid rows found in CSV' };
     }
 
-    // Categorize all expenses with AI
-    console.log(`Categorizing ${rows.length} expenses with AI...`);
-    const categorizations = await categorizeExpenses(
+    // Detect installments before categorization
+    const expensesWithInstallments = rows.map((row) => {
+      const installmentInfo = detectInstallment(row.description);
+      return { ...row, installmentInfo };
+    });
+
+    // Categorize all expenses with AI using batch processing
+    console.log(`Categorizing ${rows.length} expenses with AI (batches of 10)...`);
+    const categorizations = await categorizeBatchExpenses(
       rows.map((row) => ({
         description: row.description,
         amount: row.amount,
@@ -120,6 +127,13 @@ export async function importExpenses(
         isRecurring: categorizations[index].isRecurring,
         suggestedBudgetCategory: categorizations[index].suggestedBudgetCategory,
         notes: categorizations[index].notes,
+        ...(expensesWithInstallments[index].installmentInfo.isInstallment && {
+          installment: {
+            current: expensesWithInstallments[index].installmentInfo.currentInstallment!,
+            total: expensesWithInstallments[index].installmentInfo.totalInstallments!,
+            baseDescription: expensesWithInstallments[index].installmentInfo.baseDescription!,
+          },
+        }),
       },
       createdAt: now,
       updatedAt: now,

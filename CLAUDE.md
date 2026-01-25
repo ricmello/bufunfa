@@ -16,7 +16,7 @@ Bufunfa is a privacy-first, self-hosted expense manager with AI-powered categori
 - **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript (strict mode)
 - **Database:** MongoDB 8.0 with native driver
-- **AI:** Groq with `llama-3.3-70b-versatile` model
+- **AI:** Groq with `meta-llama/llama-4-scout-17b-16e-instruct` model (Llama 4 Scout)
 - **Charts:** Recharts via shadcn/ui chart components
 - **CSV Parsing:** PapaParse
 - **UI Components:** shadcn/ui with Tailwind CSS
@@ -128,11 +128,13 @@ export async function actionName(params): Promise<ReturnType> {
 ## AI Integration Guidelines
 
 ### Categorization
-- Model: `llama-3.3-70b-versatile`
+- Model: `meta-llama/llama-4-scout-17b-16e-instruct` (Llama 4 Scout)
 - Temperature: 0.3 (consistent results)
+- JSON Schema: Native support via `generateObject()`
 - Timeout: 10 seconds
 - Fallback: Category = "Other", confidence = 0
-- Rate limiting: 100ms delay between requests during batch import
+- Rate limiting: 200ms delay between batches during import
+- Batch size: 10 expenses per batch
 
 ### Prompt Engineering
 - Clear instructions with examples

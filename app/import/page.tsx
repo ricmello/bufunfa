@@ -7,6 +7,7 @@ import { CSVDropzone } from './components/csv-dropzone';
 import { CSVPreview } from './components/csv-preview';
 import { ImportConfirmation } from './components/import-confirmation';
 import { parseCSV, importExpenses, ParsedCSVData } from '@/lib/actions/import';
+import { parseFilenameDate } from '@/lib/actions/filename-parser';
 import { Button } from '@/components/ui/button';
 
 export default function ImportPage() {
@@ -15,17 +16,43 @@ export default function ImportPage() {
   const [fileContent, setFileContent] = useState<string>('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [detectedMonth, setDetectedMonth] = useState<number | undefined>();
+  const [detectedYear, setDetectedYear] = useState<number | undefined>();
+  const [autoDetected, setAutoDetected] = useState(false);
 
   const handleFileSelect = async (file: File, content: string) => {
     try {
       const parsed = await parseCSV(content);
       setCsvData(parsed);
       setFileContent(content);
-      toast.success(`Parsed ${parsed.totalRows} transactions`);
+
+      // Extract date from filename using server action
+      const filenameDate = await parseFilenameDate(file.name);
+
+      setDetectedMonth(filenameDate.month);
+      setDetectedYear(filenameDate.year);
+      setAutoDetected(filenameDate.autoDetected);
+
+      // Show success message with detected date if available
+      if (filenameDate.autoDetected && filenameDate.month && filenameDate.year) {
+        toast.success(
+          `Parsed ${parsed.totalRows} transactions (${getMonthName(filenameDate.month)} ${filenameDate.year} detected)`
+        );
+      } else {
+        toast.success(`Parsed ${parsed.totalRows} transactions`);
+      }
     } catch (error) {
       toast.error('Failed to parse CSV file');
       console.error(error);
     }
+  };
+
+  const getMonthName = (month: number): string => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
   };
 
   const handleImportClick = () => {
@@ -84,6 +111,9 @@ export default function ImportPage() {
           onConfirm={handleConfirmImport}
           onCancel={() => setShowConfirmation(false)}
           isImporting={isImporting}
+          initialMonth={detectedMonth}
+          initialYear={detectedYear}
+          autoDetected={autoDetected}
         />
       )}
     </div>

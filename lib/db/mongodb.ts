@@ -35,7 +35,22 @@ if (process.env.NODE_ENV === 'development') {
 
 export default clientPromise;
 
+let isSeeded = false;
+
 export async function getDatabase() {
   const client = await clientPromise;
-  return client.db('bufunfa');
+  const db = client.db('bufunfa');
+
+  // Seed default categories on first connection (only once)
+  if (!isSeeded && process.env.NODE_ENV !== 'test') {
+    isSeeded = true;
+    // Dynamic import to avoid circular dependency
+    const { seedDefaultCategories } = await import('./categories');
+    await seedDefaultCategories().catch((err) => {
+      console.error('Error seeding categories:', err);
+      isSeeded = false; // Allow retry on next call
+    });
+  }
+
+  return db;
 }

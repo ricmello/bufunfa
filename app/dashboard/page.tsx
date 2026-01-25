@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { RecentExpenses } from './components/recent-expenses';
 import { TopExpensesChart } from './components/top-expenses-chart';
 import { MonthlyTrendChart } from './components/monthly-trend-chart';
+import { CategoryBreakdownChart } from './components/category-breakdown-chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
@@ -33,12 +34,15 @@ export default function DashboardPage() {
 
       <div className="grid gap-6">
         {/* Charts Row */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Suspense fallback={<LoadingSkeleton />}>
             <TopExpensesChart />
           </Suspense>
           <Suspense fallback={<LoadingSkeleton />}>
             <MonthlyTrendChart />
+          </Suspense>
+          <Suspense fallback={<LoadingSkeleton />}>
+            <CategoryBreakdownChart />
           </Suspense>
         </div>
 

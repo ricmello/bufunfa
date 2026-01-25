@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/card';
 import { MonthlyTrendChartClient } from './monthly-trend-chart-client';
 
-export async function MonthlyTrendChart(): Promise<JSX.Element> {
+export async function MonthlyTrendChart() {
   const trends = await getMonthlyTrends(6);
 
   if (trends.length === 0) {
