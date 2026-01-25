@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: bufunfa-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: bufunfa
+      MONGO_INITDB_ROOT_PASSWORD: bufunfa_local_dev
+      MONGO_INITDB_DATABASE: bufunfa
+    volumes:
+      - bufunfa_mongodb_data:/data/db
+      - bufunfa_mongodb_config:/data/configdb
+    networks:
+      - bufunfa-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/bufunfa --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  bufunfa_mongodb_data:
+  bufunfa_mongodb_config:
+
+networks:
+  bufunfa-network:
+    driver: bridge

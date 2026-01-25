@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx shadcn@latest add sidebar dialog toast chart skeleton scroll-area table switch progress --yes)",
+      "Bash(npx shadcn@latest add sidebar --yes)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npx shadcn@latest add sonner --yes)",
+      "Bash(npx shadcn@latest add skeleton:*)",
+      "Bash(npx shadcn@latest add switch:*)",
+      "Bash(npx shadcn@latest add progress:*)",
+      "Bash(pnpm build:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
