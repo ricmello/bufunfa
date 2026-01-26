@@ -60,6 +60,7 @@ export function ExpenseTable({
 }: ExpenseTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -70,13 +71,36 @@ export function ExpenseTable({
     }
   };
 
-  const handleSelectOne = (id: string, checked: boolean) => {
+  const handleSelectOne = (
+    id: string,
+    index: number,
+    checked: boolean,
+    shiftKey: boolean
+  ) => {
     const newSelected = new Set(selectedIds);
-    if (checked) {
-      newSelected.add(id);
+
+    // Shift+click range selection
+    if (shiftKey && lastClickedIndex !== null) {
+      const start = Math.min(lastClickedIndex, index);
+      const end = Math.max(lastClickedIndex, index);
+
+      for (let i = start; i <= end; i++) {
+        if (checked) {
+          newSelected.add(data.expenses[i]._id);
+        } else {
+          newSelected.delete(data.expenses[i]._id);
+        }
+      }
     } else {
-      newSelected.delete(id);
+      // Single selection
+      if (checked) {
+        newSelected.add(id);
+      } else {
+        newSelected.delete(id);
+      }
     }
+
+    setLastClickedIndex(index);
     onSelectionChange(newSelected);
   };
 
@@ -192,13 +216,28 @@ export function ExpenseTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.expenses.map((expense) => (
-              <TableRow key={expense._id}>
+            {data.expenses.map((expense, index) => (
+              <TableRow
+                key={expense._id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={(e) => {
+                  // Don't select if clicking on buttons or interactive elements
+                  const target = e.target as HTMLElement;
+                  if (
+                    target.closest('button') ||
+                    target.closest('[role="checkbox"]')
+                  ) {
+                    return;
+                  }
+                  const newChecked = !selectedIds.has(expense._id);
+                  handleSelectOne(expense._id, index, newChecked, e.shiftKey);
+                }}
+              >
                 <TableCell>
                   <Checkbox
                     checked={selectedIds.has(expense._id)}
                     onCheckedChange={(checked) =>
-                      handleSelectOne(expense._id, checked as boolean)
+                      handleSelectOne(expense._id, index, checked as boolean, false)
                     }
                     aria-label={`Select ${expense.description}`}
                   />

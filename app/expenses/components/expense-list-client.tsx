@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import { ExpenseTable } from './expense-table';
 import { ExpenseFormDialog } from './expense-form-dialog';
 import { BulkActionsToolbar } from './bulk-actions-toolbar';
 import { ExpenseExportButton } from './expense-export-button';
+import { SelectionAnalyticsPanel } from './selection-analytics-panel';
 
 export function ExpenseListClient() {
   const [data, setData] = useState<PaginatedExpenses>({
@@ -36,6 +37,13 @@ export function ExpenseListClient() {
     useState<ExpenseWithCategory | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [showAnalytics, setShowAnalytics] = useState(true);
+
+  // Compute selected expenses
+  const selectedExpenses = useMemo(
+    () => data.expenses.filter((e) => selectedIds.has(e._id)),
+    [data.expenses, selectedIds]
+  );
 
   // Fetch data when filters change
   useEffect(() => {
@@ -56,6 +64,16 @@ export function ExpenseListClient() {
 
     fetchData();
   }, [filters]);
+
+  // Auto-show analytics on first selection
+  useEffect(() => {
+    if (selectedIds.size > 0 && !showAnalytics) {
+      const preference = localStorage.getItem('expense-analytics-closed');
+      if (preference !== 'true') {
+        setShowAnalytics(true);
+      }
+    }
+  }, [selectedIds.size, showAnalytics]);
 
   const handleFilterChange = (newFilters: Partial<ExpenseFilters>) => {
     setFilters((prev) => ({
@@ -169,6 +187,17 @@ export function ExpenseListClient() {
           expense={editingExpense}
           onClose={handleCloseEditDialog}
           onSuccess={handleSuccess}
+        />
+      )}
+
+      {/* Selection Analytics Panel */}
+      {selectedIds.size > 0 && showAnalytics && (
+        <SelectionAnalyticsPanel
+          selectedExpenses={selectedExpenses}
+          onClose={() => {
+            setShowAnalytics(false);
+            localStorage.setItem('expense-analytics-closed', 'true');
+          }}
         />
       )}
     </div>
