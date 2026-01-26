@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.15",
+    "@auth0/nextjs-auth0": "^4.14.0",
     "@base-ui/react": "^1.1.0",
     "@hugeicons/core-free-icons": "^3.1.1",
     "@hugeicons/react": "^1.1.4",

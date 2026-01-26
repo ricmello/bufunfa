@@ -4,6 +4,7 @@ import "./globals.css";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -35,13 +36,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SidebarProvider>
-          <AppSidebar />
-          <main className="w-full">
-            {children}
-          </main>
-        </SidebarProvider>
-        <Toaster />
+        <Auth0Provider>
+          <SidebarProvider>
+            <AppSidebar />
+            <main className="w-full">
+              {children}
+            </main>
+          </SidebarProvider>
+          <Toaster />
+        </Auth0Provider>
       </body>
     </html>
   );

@@ -14,7 +14,12 @@
       "Bash(docker-compose up:*)",
       "Bash(git add:*)",
       "Bash(git reset:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "WebSearch",
+      "Bash(pnpm type-check:*)",
+      "Bash(find:*)",
+      "Bash(docker exec:*)",
+      "Bash(pnpm install:*)"
     ]
   }
 }
