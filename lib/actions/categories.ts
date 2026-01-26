@@ -1,7 +1,7 @@
 'use server';
 
 import { getCategoriesCollection } from '../db/categories';
-import { Category } from '../types/category';
+import type { Category } from '../types/category';
 
 /**
  * Get all categories with their subcategories

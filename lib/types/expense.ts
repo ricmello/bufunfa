@@ -50,3 +50,43 @@ export const EXPENSE_CATEGORIES = [
 ] as const;
 
 export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+
+// Expense query and filtering types
+export interface ExpenseFilters {
+  dateFrom?: Date;
+  dateTo?: Date;
+  categoryId?: string;
+  subcategoryId?: string;
+  amountMin?: number;
+  amountMax?: number;
+  search?: string;
+  type?: 'expense' | 'credit' | 'all';
+  page?: number;
+  pageSize?: number;
+  sortBy?: 'date' | 'amount' | 'description' | 'category';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ExpenseWithCategory extends Expense {
+  categoryName: string;
+  categoryColor: string;
+  subcategoryName: string;
+}
+
+export interface PaginatedExpenses {
+  expenses: ExpenseWithCategory[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface ExpenseFormData {
+  description: string;
+  amount: number;
+  date: Date;
+  categoryId: string;
+  subcategoryId: string;
+  merchantName: string | null;
+  notes: string | null;
+}

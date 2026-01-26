@@ -10,9 +10,9 @@
 ---
 
 ## Stack
-Next.js 16 (App Router) • TS (strict) • MongoDB 8.0 • Groq AI (Llama 4 Scout) • shadcn/ui • Tailwind • PapaParse
+Next.js 16 (App Router) • TS (strict) • MongoDB 8.0 • Auth0 • Groq AI (Llama 4 Scout) • shadcn/ui • Tailwind • PapaParse
 
-Privacy-first expense manager: self-hosted, no auth, no telemetry, AI categorization via Groq only
+Privacy-first expense manager: self-hosted, Auth0 authentication, no telemetry, AI categorization via Groq only
 
 ---
 
@@ -117,6 +117,77 @@ Privacy-first expense manager: self-hosted, no auth, no telemetry, AI categoriza
 - Convert `ObjectId` → string before sending to client
 - Join categories via `$lookup` when displaying
 
+### Pagination & Filtering Pattern
+**Use `$facet` for count + data in single query:**
+```ts
+{
+  $facet: {
+    metadata: [{ $count: 'totalCount' }],
+    data: [
+      { $skip: (page - 1) * pageSize },
+      { $limit: pageSize },
+      // ... $lookup, projections
+    ]
+  }
+}
+```
+
+**Filter interface:**
+```ts
+interface Filters {
+  dateFrom?: Date;
+  dateTo?: Date;
+  categoryId?: string;
+  search?: string; // Use $or with $regex
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+```
+
+**Return type:**
+```ts
+interface Paginated<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+```
+
+### Bulk Operations Pattern
+**Array operations need `as any` cast for ObjectId arrays:**
+```ts
+const objectIds = ids.map(id => new ObjectId(id));
+await collection.updateMany(
+  { _id: { $in: objectIds } } as any,
+  { $set: { ... } }
+);
+```
+
+### CSV Export Pattern
+**Server-side generation:**
+```ts
+// Escape CSV values
+const escape = (val: any) => {
+  const str = String(val);
+  return str.includes('"') || str.includes(',')
+    ? `"${str.replace(/"/g, '""')}"`
+    : str;
+};
+
+// Headers + rows
+const csv = [
+  headers.join(','),
+  ...rows.map(row => row.map(escape).join(','))
+].join('\n');
+
+// Return for client download
+return { success: true, csv };
+```
+
 ---
 
 ## Server Actions Pattern
@@ -197,7 +268,12 @@ components/ui/             # shadcn
 2. Third-party
 3. Local components
 4. Utils/actions
-5. Types
+5. Types (use `import type` for types)
+
+**Type Imports in SA:**
+- × Don't re-export types from `'use server'` files (causes build errors)
+- ✓ Use `import type { Category } from '../types/category'`
+- ✓ Import types directly from `/lib/types/` in CA
 
 ---
 
@@ -224,6 +300,15 @@ components/ui/             # shadcn
 
 ## Security
 
+### Auth0
+- All routes protected by middleware (except `/auth/*`)
+- Session checked on every request
+- Auto-redirect to login if unauthenticated
+- Required env vars: `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_SECRET`, `APP_BASE_URL`
+- Auth routes: `/auth/login`, `/auth/logout`, `/auth/callback`
+- Access session in SC: `await auth0.getSession()`
+- Access user in CA: `useUser()` hook
+
 ### MongoDB
 - Env vars for connection
 - Parameterized queries (driver handles)
@@ -239,6 +324,7 @@ components/ui/             # shadcn
 - × Never commit `.env.local`
 - ✓ Use `NEXT_PUBLIC_` only for client vars
 - ✓ Validate required vars at startup
+- ✓ Auth0 secrets must be configured
 
 ---
 
@@ -258,12 +344,13 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 
 ## Pre-Commit Checklist
 
-- [ ] TS compiles
+- [ ] TS compiles (`pnpm exec tsc --noEmit`)
 - [ ] No console errors
 - [ ] Dark mode works
 - [ ] Mobile responsive
 - [ ] Loading states
 - [ ] Error states
+- [ ] Empty states (no data scenarios)
 
 ---
 
@@ -310,6 +397,55 @@ docker exec -i bufunfa-mongodb mongosh bufunfa -u bufunfa -p bufunfa_local_dev -
 - Handle empty state
 - Wrap in `<Suspense>`
 
+### Adding CRUD Feature with Filters/Pagination
+**Example: `/expenses` route (reference implementation)**
+
+**Structure:**
+```
+app/expenses/
+├── page.tsx                    # SC with Suspense
+└── components/
+    ├── expense-list-client.tsx # Main CA (state mgmt)
+    ├── expense-filters.tsx     # CA filters
+    ├── expense-table.tsx       # CA table + pagination
+    ├── expense-form-dialog.tsx # CA add/edit dialog
+    ├── bulk-actions-toolbar.tsx# CA bulk ops
+    └── expense-export-button.tsx# CA CSV export
+```
+
+**Main client pattern:**
+```ts
+// State: data, filters, selectedIds, dialogs
+// useEffect → fetch when filters change
+// useTransition → refresh action
+// Pass handlers down to child components
+```
+
+**Filters component:**
+- Always-visible search bar
+- Collapsible advanced filters
+- Category → cascading subcategory (disabled until category selected)
+- Clear all button (when hasActiveFilters)
+
+**Table component:**
+- Checkbox multi-select (header = select all)
+- Sortable columns with icons
+- Pagination controls at bottom
+- Edit/Delete with confirmation dialogs
+- Empty state message
+
+**Form dialog:**
+- Pre-populate for edit mode
+- Category → Subcategory cascade
+- Client-side validation before submit
+- Toast notifications
+
+**Bulk toolbar:**
+- Floating bar when items selected
+- Badge with count
+- Bulk delete + bulk recategorize
+- Confirmation dialogs
+
 ---
 
-**Last Updated:** 2026-01-25 | **Version:** 2.0.0
+**Last Updated:** 2026-01-26 | **Version:** 2.1.0
