@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { Home, Upload, Settings, FolderKanban, Receipt } from 'lucide-react';
+import { Home, Upload, Settings, FolderKanban, Receipt, Users } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -27,6 +27,11 @@ const navigationItems = [
     title: 'Expenses',
     href: '/expenses',
     icon: Receipt,
+  },
+  {
+    title: 'Split Bills',
+    href: '/split-bills',
+    icon: Users,
   },
   {
     title: 'Import',

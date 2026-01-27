@@ -1,10 +1,22 @@
 import { Collection, ObjectId } from 'mongodb';
 import { getDatabase } from './mongodb';
 import { Expense } from '../types/expense';
+import type { SplitEvent } from '../types/split-event';
+import type { Receipt } from '../types/receipt';
 
 export async function getExpensesCollection(): Promise<Collection<Expense>> {
   const db = await getDatabase();
   return db.collection<Expense>('expenses');
+}
+
+export async function getEventsCollection(): Promise<Collection<SplitEvent>> {
+  const db = await getDatabase();
+  return db.collection<SplitEvent>('split_events');
+}
+
+export async function getReceiptsCollection(): Promise<Collection<Receipt>> {
+  const db = await getDatabase();
+  return db.collection<Receipt>('split_receipts');
 }
 
 export async function ensureIndexes(): Promise<void> {
@@ -14,6 +26,16 @@ export async function ensureIndexes(): Promise<void> {
   await expenses.createIndex({ statementYear: 1, statementMonth: 1 });
   await expenses.createIndex({ date: -1 });
   await expenses.createIndex({ categoryId: 1, subcategoryId: 1, statementYear: 1, statementMonth: 1 });
+
+  // Split events indexes
+  const events = await getEventsCollection();
+  await events.createIndex({ hostUserId: 1, eventDate: -1 });
+  await events.createIndex({ eventDate: -1 });
+  await events.createIndex({ status: 1, eventDate: -1 });
+
+  // Split receipts indexes
+  const receipts = await getReceiptsCollection();
+  await receipts.createIndex({ eventId: 1, createdAt: -1 });
 
   console.log('✅ Database indexes created successfully');
 }
