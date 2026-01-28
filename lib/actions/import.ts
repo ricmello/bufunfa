@@ -1,12 +1,15 @@
 'use server';
 
 import Papa from 'papaparse';
+import { ObjectId } from 'mongodb';
 import { getExpensesCollection } from '../db/collections';
 import { categorizeBatchExpenses } from '../ai/categorize';
 import { Expense } from '../types/expense';
 import { detectInstallment } from '../utils/installment-detector';
 import { getAllCategories } from './categories';
 import { Category } from '../types/category';
+import { findMatchingForecasts } from './forecast-queries';
+import type { ExpenseWithCategory } from '../types/expense';
 
 interface CSVRow {
   Date: string;
@@ -135,6 +138,115 @@ function resolveCategoryIds(
     categoryId: category._id!,
     subcategoryId: subcategory._id,
   };
+}
+
+/**
+ * Confirm merge: Update forecast with imported bank data
+ * Converts forecast to real expense with actual transaction details
+ */
+/**
+ * Check if any expenses match existing forecasts
+ * Returns array of matches for user confirmation
+ */
+export async function checkForForecastMatches(
+  expenses: Array<{
+    date: Date;
+    amount: number;
+    description: string;
+  }>
+): Promise<
+  Array<{
+    expenseIndex: number;
+    matchingForecasts: ExpenseWithCategory[];
+  }>
+> {
+  const matches: Array<{
+    expenseIndex: number;
+    matchingForecasts: ExpenseWithCategory[];
+  }> = [];
+
+  for (let i = 0; i < expenses.length; i++) {
+    const expense = expenses[i];
+    const matchingForecasts = await findMatchingForecasts(expense);
+
+    if (matchingForecasts.length > 0) {
+      matches.push({
+        expenseIndex: i,
+        matchingForecasts,
+      });
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * Confirm merge: Update forecast with imported bank data
+ * Converts forecast to real expense with actual transaction details
+ */
+export async function confirmMerge(
+  forecastId: string,
+  importedData: {
+    description: string;
+    amount: number;
+    date: Date;
+    rawCsvRow: string;
+    merchantName?: string | null;
+    categoryId?: string;
+    subcategoryId?: string;
+    categoryConfidence?: number;
+    aiInsights?: any;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const collection = await getExpensesCollection();
+
+    // Verify the forecast exists
+    const forecast = await collection.findOne({
+      _id: new ObjectId(forecastId),
+      isForecast: true,
+    } as any);
+
+    if (!forecast) {
+      return { success: false, error: 'Forecast not found or already confirmed' };
+    }
+
+    // Update forecast with bank data and convert to real expense
+    const updateDoc: any = {
+      description: importedData.description,
+      amount: importedData.amount,
+      date: importedData.date,
+      rawCsvRow: importedData.rawCsvRow,
+      isForecast: false, // Convert to real expense
+      updatedAt: new Date(),
+    };
+
+    // Optionally update category/subcategory from AI categorization
+    if (importedData.categoryId) updateDoc.categoryId = importedData.categoryId;
+    if (importedData.subcategoryId) updateDoc.subcategoryId = importedData.subcategoryId;
+    if (importedData.categoryConfidence !== undefined) {
+      updateDoc.categoryConfidence = importedData.categoryConfidence;
+    }
+    if (importedData.merchantName !== undefined) {
+      updateDoc.merchantName = importedData.merchantName;
+    }
+    if (importedData.aiInsights) {
+      updateDoc.aiInsights = importedData.aiInsights;
+    }
+
+    await collection.updateOne(
+      { _id: new ObjectId(forecastId) } as any,
+      { $set: updateDoc }
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error confirming merge:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
 }
 
 export async function importExpenses(

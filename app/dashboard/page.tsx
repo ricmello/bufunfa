@@ -3,6 +3,7 @@ import { RecentExpenses } from './components/recent-expenses';
 import { TopExpensesChart } from './components/top-expenses-chart';
 import { MonthlyTrendChart } from './components/monthly-trend-chart';
 import { CategoryBreakdownChart } from './components/category-breakdown-chart';
+import { UpcomingForecasts } from './components/upcoming-forecasts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
@@ -46,10 +47,15 @@ export default function DashboardPage() {
           </Suspense>
         </div>
 
-        {/* Recent Expenses */}
-        <Suspense fallback={<LoadingSkeleton />}>
-          <RecentExpenses />
-        </Suspense>
+        {/* Upcoming Forecasts & Recent Expenses */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <Suspense fallback={<LoadingSkeleton />}>
+            <UpcomingForecasts />
+          </Suspense>
+          <Suspense fallback={<LoadingSkeleton />}>
+            <RecentExpenses />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

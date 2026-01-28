@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/extend-forecasts",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/convert-forecasts",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}

@@ -146,6 +146,7 @@ export function ExpenseListClient() {
         <BulkActionsToolbar
           selectedCount={selectedIds.size}
           selectedIds={Array.from(selectedIds)}
+          expenses={data.expenses}
           onComplete={handleBulkActionComplete}
           onCancel={() => setSelectedIds(new Set())}
         />

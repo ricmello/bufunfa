@@ -22,6 +22,11 @@ export interface Expense {
       baseDescription: string;
     };
   };
+  // Recurring expense fields (future-proof)
+  userId?: string; // Auth0 user.sub
+  recurringExpenseId?: string; // Link to recurring template
+  isForecast?: boolean; // Default: false (undefined = false)
+  forecastDate?: Date; // Original scheduled date
 }
 
 export interface ExpenseInsert extends Omit<Expense, '_id' | 'createdAt' | 'updatedAt'> {
@@ -65,11 +70,14 @@ export interface ExpenseFilters {
   pageSize?: number;
   sortBy?: 'date' | 'amount' | 'description' | 'category';
   sortOrder?: 'asc' | 'desc';
+  includeForecast?: boolean; // Include forecast expenses (default: true)
+  forecastOnly?: boolean; // Show only forecasts (default: false)
 }
 
 export interface ExpenseWithCategory extends Expense {
   categoryName: string;
   categoryColor: string;
+  categoryIcon?: string;
   subcategoryName: string;
 }
 

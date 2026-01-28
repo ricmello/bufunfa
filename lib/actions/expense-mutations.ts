@@ -21,6 +21,8 @@ export interface ExpenseFilters {
   pageSize?: number;
   sortBy?: 'date' | 'amount' | 'description' | 'category';
   sortOrder?: 'asc' | 'desc';
+  includeForecast?: boolean;
+  forecastOnly?: boolean;
 }
 
 export interface ExpenseWithCategory {
@@ -31,6 +33,7 @@ export interface ExpenseWithCategory {
   categoryId: string;
   categoryName: string;
   categoryColor: string;
+  categoryIcon?: string;
   subcategoryId: string;
   subcategoryName: string;
   merchantName: string | null;
@@ -49,6 +52,10 @@ export interface ExpenseWithCategory {
   };
   createdAt: Date;
   updatedAt: Date;
+  userId?: string;
+  recurringExpenseId?: string;
+  isForecast?: boolean;
+  forecastDate?: Date;
 }
 
 export interface PaginatedExpenses {
@@ -128,6 +135,14 @@ export async function getExpenses(
         { merchantName: { $regex: filters.search, $options: 'i' } },
       ];
     }
+
+    // Forecast filter
+    if (filters.forecastOnly) {
+      matchQuery.isForecast = true;
+    } else if (filters.includeForecast === false) {
+      matchQuery.isForecast = { $ne: true };
+    }
+    // Default: include both (no filter)
 
     // Pagination
     const page = filters.page || 1;

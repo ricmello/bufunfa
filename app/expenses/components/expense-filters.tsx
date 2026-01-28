@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -93,6 +95,20 @@ export function ExpenseFilters({
           Search
         </Button>
       </form>
+
+      {/* Forecast Toggle */}
+      <div className="flex items-center gap-2">
+        <Switch
+          id="include-forecasts"
+          checked={filters.includeForecast !== false}
+          onCheckedChange={(checked) =>
+            onFilterChange({ includeForecast: checked })
+          }
+        />
+        <Label htmlFor="include-forecasts" className="text-sm cursor-pointer">
+          Show Forecasts
+        </Label>
+      </div>
 
       {/* Advanced Filters Toggle */}
       <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>

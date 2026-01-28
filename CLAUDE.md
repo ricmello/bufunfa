@@ -301,13 +301,75 @@ components/ui/             # shadcn
 ## Security
 
 ### Auth0
+
+**Configuration:**
+- Auth0 v4 SDK via centralized auth instance: `/lib/auth0.ts`
+- Required env: `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_SECRET`, `APP_BASE_URL`
+- Routes: `/auth/login`, `/auth/logout`, `/auth/callback`
 - All routes protected by middleware (except `/auth/*`)
-- Session checked on every request
-- Auto-redirect to login if unauthenticated
-- Required env vars: `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_SECRET`, `APP_BASE_URL`
-- Auth routes: `/auth/login`, `/auth/logout`, `/auth/callback`
-- Access session in SC: `await auth0.getSession()`
-- Access user in CA: `useUser()` hook
+
+**Client Components:**
+```typescript
+"use client";
+import { useUser } from "@auth0/nextjs-auth0/client";
+
+export default function Profile() {
+  const { user, isLoading, error } = useUser();
+  if (isLoading) return <div>Loading...</div>;
+  if (!user) return <div>Not authenticated</div>;
+  return <div>Welcome, {user.name}!</div>;
+}
+```
+
+**Server Components & Server Actions:**
+```typescript
+import { auth0 } from "@/lib/auth0";
+
+// Server Component
+export default async function Page() {
+  const session = await auth0.getSession();
+  if (!session) return <div>Not authenticated</div>;
+  return <div>Welcome, {session.user.name}!</div>;
+}
+
+// Server Action
+'use server';
+export async function someAction() {
+  const session = await auth0.getSession();
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  const userId = session.user.sub; // Use for userId field
+  // ... perform action
+}
+```
+
+**Middleware:**
+```typescript
+import { auth0 } from "@/lib/auth0";
+
+export async function middleware(request: NextRequest) {
+  const authRes = await auth0.middleware(request);
+  if (request.nextUrl.pathname.startsWith("/auth")) return authRes;
+
+  const session = await auth0.getSession(request);
+  if (!session) {
+    return NextResponse.redirect(new URL("/auth/login", request.nextUrl.origin));
+  }
+  return authRes;
+}
+```
+
+**× NEVER use:**
+```typescript
+// ❌ WRONG - deprecated pattern
+import { getSession } from '@auth0/nextjs-auth0';
+const session = await getSession();
+
+// ✓ CORRECT - always use auth0 instance
+import { auth0 } from '@/lib/auth0';
+const session = await auth0.getSession();
+```
 
 ### MongoDB
 - Env vars for connection

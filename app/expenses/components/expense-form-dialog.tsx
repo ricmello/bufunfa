@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { getAllCategories } from '@/lib/actions/categories';
 import type { Category } from '@/lib/types/category';
@@ -29,6 +30,7 @@ import {
   type ExpenseFormData,
   type ExpenseWithCategory,
 } from '@/lib/actions/expense-mutations';
+import { updateAllFutureForecasts } from '@/lib/actions/forecast-mutations';
 
 interface ExpenseFormDialogProps {
   isOpen: boolean;
@@ -137,6 +139,38 @@ export function ExpenseFormDialog({
     } catch (error) {
       toast.error('Failed to save expense');
       console.error('Error saving expense:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateAllFuture = async () => {
+    if (!expense?.recurringExpenseId || !expense?.forecastDate) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await updateAllFutureForecasts(
+        expense.recurringExpenseId,
+        expense.forecastDate,
+        {
+          description: formData.description,
+          amount: formData.amount,
+          categoryId: formData.categoryId,
+          subcategoryId: formData.subcategoryId,
+          merchantName: formData.merchantName,
+        }
+      );
+
+      if (result.success) {
+        toast.success(`Updated ${result.count || 0} future forecast${(result.count || 0) > 1 ? 's' : ''}`);
+        onSuccess();
+        onClose();
+      } else {
+        toast.error(result.error || 'Failed to update future forecasts');
+      }
+    } catch (error) {
+      toast.error('Failed to update future forecasts');
+      console.error('Error updating future forecasts:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -304,6 +338,26 @@ export function ExpenseFormDialog({
               rows={3}
             />
           </div>
+
+          {/* Forecast Alert & Bulk Update */}
+          {isEditMode && expense?.isForecast && expense?.recurringExpenseId && (
+            <div className="space-y-3 pt-2">
+              <Alert>
+                <AlertDescription>
+                  🔮 This is a forecast from a recurring template. You can update just this occurrence or all future occurrences.
+                </AlertDescription>
+              </Alert>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleUpdateAllFuture}
+                disabled={isSubmitting}
+                className="w-full"
+              >
+                Update All Future Occurrences
+              </Button>
+            </div>
+          )}
 
           <DialogFooter>
             <Button

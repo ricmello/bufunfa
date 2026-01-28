@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Tag, X } from 'lucide-react';
+import { Trash2, Tag, X, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -36,11 +36,17 @@ import type { Category } from '@/lib/types/category';
 import {
   bulkDeleteExpenses,
   bulkRecategorizeExpenses,
+  type ExpenseWithCategory,
 } from '@/lib/actions/expense-mutations';
+import {
+  bulkConfirmForecasts,
+  bulkDeleteForecasts,
+} from '@/lib/actions/forecast-mutations';
 
 interface BulkActionsToolbarProps {
   selectedCount: number;
   selectedIds: string[];
+  expenses: ExpenseWithCategory[];
   onComplete: () => void;
   onCancel: () => void;
 }
@@ -48,14 +54,19 @@ interface BulkActionsToolbarProps {
 export function BulkActionsToolbar({
   selectedCount,
   selectedIds,
+  expenses,
   onComplete,
   onCancel,
 }: BulkActionsToolbarProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showRecategorizeDialog, setShowRecategorizeDialog] = useState(false);
+  const [showConfirmForecastsDialog, setShowConfirmForecastsDialog] = useState(false);
+  const [showDeleteForecastsDialog, setShowDeleteForecastsDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRecategorizing, setIsRecategorizing] = useState(false);
+  const [isConfirmingForecasts, setIsConfirmingForecasts] = useState(false);
+  const [isDeletingForecasts, setIsDeletingForecasts] = useState(false);
 
   // Recategorize form state
   const [categoryId, setCategoryId] = useState('');
@@ -71,6 +82,15 @@ export function BulkActionsToolbar({
   }, []);
 
   const selectedCategory = categories.find((c) => c._id === categoryId);
+
+  // Calculate forecast counts
+  const selectedForecasts = selectedIds.filter(id => {
+    const expense = expenses.find(e => e._id === id);
+    return expense?.isForecast;
+  });
+  const forecastCount = selectedForecasts.length;
+  const hasForecastsSelected = forecastCount > 0;
+  const hasOnlyForecasts = forecastCount === selectedCount;
 
   const handleBulkDelete = async () => {
     setIsDeleting(true);
@@ -119,6 +139,42 @@ export function BulkActionsToolbar({
     }
   };
 
+  const handleBulkConfirmForecasts = async () => {
+    setIsConfirmingForecasts(true);
+    try {
+      const result = await bulkConfirmForecasts(selectedForecasts);
+      if (result.success) {
+        toast.success(`${result.count} forecast(s) confirmed successfully`);
+        onComplete();
+        setShowConfirmForecastsDialog(false);
+      } else {
+        toast.error(result.error || 'Failed to confirm forecasts');
+      }
+    } catch (error) {
+      toast.error('Failed to confirm forecasts');
+    } finally {
+      setIsConfirmingForecasts(false);
+    }
+  };
+
+  const handleBulkDeleteForecasts = async () => {
+    setIsDeletingForecasts(true);
+    try {
+      const result = await bulkDeleteForecasts(selectedForecasts);
+      if (result.success) {
+        toast.success(`${result.count} forecast(s) deleted successfully`);
+        onComplete();
+        setShowDeleteForecastsDialog(false);
+      } else {
+        toast.error(result.error || 'Failed to delete forecasts');
+      }
+    } catch (error) {
+      toast.error('Failed to delete forecasts');
+    } finally {
+      setIsDeletingForecasts(false);
+    }
+  };
+
   return (
     <>
       <div className="bg-primary text-primary-foreground p-4 rounded-lg flex items-center justify-between">
@@ -127,6 +183,30 @@ export function BulkActionsToolbar({
             {selectedCount} selected
           </Badge>
           <div className="flex gap-2">
+            {hasForecastsSelected && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowConfirmForecastsDialog(true)}
+                  className="bg-green-600 text-white hover:bg-green-700"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Confirm {forecastCount} Forecast{forecastCount > 1 ? 's' : ''}
+                </Button>
+                {hasOnlyForecasts && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowDeleteForecastsDialog(true)}
+                    className="bg-orange-600 text-white hover:bg-orange-700"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Forecasts
+                  </Button>
+                )}
+              </>
+            )}
             <Button
               variant="secondary"
               size="sm"
@@ -253,6 +333,62 @@ export function BulkActionsToolbar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Forecasts Dialog */}
+      <AlertDialog
+        open={showConfirmForecastsDialog}
+        onOpenChange={setShowConfirmForecastsDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm {forecastCount} Forecast{forecastCount > 1 ? 's' : ''}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to confirm {forecastCount} forecast{forecastCount > 1 ? 's' : ''}?
+              This will convert them to real expenses.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isConfirmingForecasts}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkConfirmForecasts}
+              disabled={isConfirmingForecasts}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isConfirmingForecasts ? 'Confirming...' : 'Confirm All'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Forecasts Dialog */}
+      <AlertDialog
+        open={showDeleteForecastsDialog}
+        onOpenChange={setShowDeleteForecastsDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {forecastCount} Forecast{forecastCount > 1 ? 's' : ''}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {forecastCount} forecast{forecastCount > 1 ? 's' : ''}?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingForecasts}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDeleteForecasts}
+              disabled={isDeletingForecasts}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingForecasts ? 'Deleting...' : 'Delete All'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

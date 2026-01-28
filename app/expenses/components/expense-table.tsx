@@ -5,6 +5,7 @@ import { Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -219,7 +220,10 @@ export function ExpenseTable({
             {data.expenses.map((expense, index) => (
               <TableRow
                 key={expense._id}
-                className="cursor-pointer hover:bg-muted/50"
+                className={cn(
+                  'cursor-pointer hover:bg-muted/50',
+                  expense.isForecast && 'opacity-60 bg-blue-50/50 dark:bg-blue-950/20'
+                )}
                 onClick={(e) => {
                   // Don't select if clicking on buttons or interactive elements
                   const target = e.target as HTMLElement;
@@ -247,9 +251,16 @@ export function ExpenseTable({
                 </TableCell>
                 <TableCell>
                   <div>
-                    <p className="font-medium">
-                      {expense.merchantName || expense.description}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">
+                        {expense.merchantName || expense.description}
+                      </p>
+                      {expense.isForecast && (
+                        <Badge variant="outline" className="text-xs">
+                          🔮 Forecast
+                        </Badge>
+                      )}
+                    </div>
                     {expense.merchantName && (
                       <p className="text-xs text-muted-foreground">
                         {expense.description}
