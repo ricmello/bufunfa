@@ -10,6 +10,7 @@ import type { SplitEvent } from '@/lib/types/split-event';
 import { ParticipantsSection } from './participants-section';
 import { SplitsCalculationSection } from './splits-calculation-section';
 import { ReceiptsSection } from './receipts-section';
+import { ShareButton } from './share-button';
 
 interface EventDetailClientProps {
   event: SplitEvent;
@@ -70,6 +71,9 @@ export function EventDetailClient({ event, onRefresh }: EventDetailClientProps) 
               <p className="text-muted-foreground mt-1">{event.description}</p>
             )}
           </div>
+        </div>
+        <div className="flex gap-2">
+          <ShareButton event={event} onRefresh={onRefresh} />
         </div>
       </div>
 

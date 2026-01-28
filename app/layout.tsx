@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { LayoutWrapper } from "@/components/layout-wrapper";
 import { Toaster } from "@/components/ui/sonner";
 import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 
@@ -38,10 +38,7 @@ export default function RootLayout({
       >
         <Auth0Provider>
           <SidebarProvider>
-            <AppSidebar />
-            <main className="w-full">
-              {children}
-            </main>
+            <LayoutWrapper>{children}</LayoutWrapper>
           </SidebarProvider>
           <Toaster />
         </Auth0Provider>

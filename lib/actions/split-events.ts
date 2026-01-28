@@ -300,6 +300,100 @@ export async function deleteEvent(
 }
 
 /**
+ * Update PIX settings for an event
+ */
+export async function updatePIXSettings(
+  eventId: string,
+  pixKey: string | null,
+  pixName: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await auth0.getSession();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const collection = await getEventsCollection();
+
+    // Verify ownership
+    const existing = await collection.findOne({
+      _id: new ObjectId(eventId),
+      hostUserId: session.user.sub,
+    } as any);
+
+    if (!existing) {
+      return { success: false, error: 'Event not found or unauthorized' };
+    }
+
+    // Update PIX settings
+    await collection.updateOne(
+      { _id: new ObjectId(eventId) } as any,
+      {
+        $set: {
+          pixKey: pixKey?.trim() || null,
+          pixName: pixName?.trim() || null,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in updatePIXSettings:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Toggle receipt sharing for an event
+ */
+export async function toggleReceiptSharing(
+  eventId: string,
+  includeReceipts: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await auth0.getSession();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const collection = await getEventsCollection();
+
+    // Verify ownership
+    const existing = await collection.findOne({
+      _id: new ObjectId(eventId),
+      hostUserId: session.user.sub,
+    } as any);
+
+    if (!existing) {
+      return { success: false, error: 'Event not found or unauthorized' };
+    }
+
+    // Update receipt sharing preference
+    await collection.updateOne(
+      { _id: new ObjectId(eventId) } as any,
+      {
+        $set: {
+          includeReceipts,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in toggleReceiptSharing:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
  * Export events to CSV
  */
 export async function exportEventsToCSV(

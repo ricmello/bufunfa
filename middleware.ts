@@ -10,6 +10,11 @@ export async function middleware(request: NextRequest) {
     return await auth0.middleware(request);
   }
 
+  // Public routes (no auth required)
+  if (pathname.startsWith('/split-bills/share') || pathname.startsWith('/s/')) {
+    return NextResponse.next();
+  }
+
   // Check for session on protected routes
   const session = await auth0.getSession(request);
 
@@ -30,7 +35,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+     * - Static assets: .svg, .png, .jpg, .jpeg, .gif, .webp, .ico
      */
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.webp|.*\\.ico).*)",
   ],
 };

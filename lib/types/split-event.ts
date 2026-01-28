@@ -16,6 +16,9 @@ export interface SplitEvent {
   participants: Participant[];
   totalAmount: number; // Cached sum of receipts
   totalWeights: number; // Cached sum of weights
+  pixKey?: string | null; // PIX key for payment settlement
+  pixName?: string | null; // Recipient name for PIX
+  includeReceipts?: boolean; // Toggle receipt transparency in share
   createdAt: Date;
   updatedAt: Date;
 }
